@@ -82,6 +82,7 @@ body.dark .comment-item{border-color:#444;}
 <input type="text" id="img" placeholder="Git / 网络图片链接">
 <textarea id="desc" placeholder="作品简介"></textarea>
 <button class="btn" onclick="publishWork()">立即发布</button>
+<button class="btn" id="logoutBtn">退出登录</button>
 </div>
 
 <div class="carousel" id="carousel">
@@ -313,6 +314,15 @@ function renderAll(){
 }
 
 loadData();
+// 退出登录
+logoutBtn.onclick = function(){
+  admin = false;
+  // 隐藏管理按钮
+  carouselBtn.style.display = "none";
+  pubOpenBtn.style.display = "none";
+  alert("已退出登录");
+  renderWorks();
+};
 </script>
 
 </body>
