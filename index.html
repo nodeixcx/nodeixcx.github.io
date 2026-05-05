@@ -604,29 +604,7 @@ const Storage = {
       { url: "./9.png", alt: "侦探社Logo" }
     ];
   }
-};
-
-// 防火墙防护
-(function(){
-  const FW = {
-    config:{
-      badWords:['色','黄','淫','秽','嫖','赌','毒','AV','porn','sex','xxx','约炮','嫖娼','赌博','六合彩','杀猪盘','病毒','黑客','劫持','广告']
-    },
-    hasBadWord(s){if(!s)return false;s=String(s).toLowerCase();return this.config.badWords.some(w=>s.includes(w));},
-    enableSuperProtect(){
-      document.addEventListener('contextmenu',e=>e.preventDefault());
-      document.addEventListener('keydown',e=>{
-        if(e.key==='F12'||(e.ctrlKey&&e.shiftKey&&['I','J','C'].includes(e.key))||(e.ctrlKey&&e.key==='U')){
-          e.preventDefault();
-          alert("禁止打开开发者工具");
-        }
-      });
-    },
-    start(){this.enableSuperProtect();}
-  };
-  window.FW=FW;
-  FW.start();
-})();
+}
 
 // 页面逻辑
 const themeBtn=document.getElementById('themeBtn');
