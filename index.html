@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>智库</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:sans-serif;}
+body{background:#f1f3f5;color:#222;padding:15px;max-width:1100px;margin:0 auto;transition:0.3s;}
+body.dark{background:#1a1a1a;color:#eee;}
+
+.logo{font-size:26px;font-weight:bold;color:#2563eb;margin-bottom:15px;}
+.btn{padding:8px 14px;border:none;border-radius:20px;background:#2563eb;color:white;margin:4px;cursor:pointer;}
+.btn.del{background:#dc2626;}
+.btn.cat{background:#e5e7eb;color:#333;}
+.btn.cat.active{background:#2563eb;color:#fff;}
+
+.box{background:#fff;padding:14px;border-radius:12px;margin-bottom:15px;display:none;}
+.box.on{display:block;}
+body.dark .box{background:#282828;}
+
+input,textarea,select{width:100%;padding:9px;margin:6px 0;border:1px #ddd solid;border-radius:8px;}
+body.dark input,body.dark textarea,body.dark select{background:#333;color:#fff;border-color:#444;}
+
+.carousel{width:100%;height:220px;border-radius:12px;overflow:hidden;position:relative;margin-bottom:18px;}
+.c-item{position:absolute;inset:0;opacity:0;transition:.4s;}
+.c-item.active{opacity:1;}
+.c-item img{width:100%;height:100%;object-fit:cover;background:#eee;}
+.c-btn{position:absolute;top:50%;transform:translateY(-50%);width:32px;height:32px;border-radius:50%;background:rgba(0,0,0,.3);color:white;border:none;cursor:pointer;}
+.c-l{left:10px;}
+.c-r{right:10px;}
+
+.cat-nav{display:flex;gap:8px;margin-bottom:15px;flex-wrap:wrap;}
+.work-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;}
+.work-card{background:#fff;border-radius:12px;overflow:hidden;}
+body.dark .work-card{background:#282828;}
+.work-card img{width:100%;height:150px;object-fit:cover;background:#eee;}
+.work-info{padding:10px;}
+.work-title{font-size:15px;margin-bottom:6px;}
+.work-type{font-size:12px;color:#888;}
+
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:99;padding:20px;display:none;overflow-y:auto;}
+.modal-box{max-width:700px;margin:0 auto;background:#fff;border-radius:12px;padding:15px;}
+body.dark .modal-box{background:#282828;}
+.close{float:right;font-size:22px;cursor:pointer;}
+
+.like{cursor:pointer;color:#666;font-size:16px;}
+.like.active{color:red;}
+.comment-list{max-height:220px;overflow-y:auto;margin:10px 0;padding-top:10px;border-top:1px #eee solid;}
+body.dark .comment-list{border-color:#444;}
+.comment-item{padding:6px 0;border-bottom:1px #eee solid;display:flex;justify-content:space-between;align-items:center;}
+body.dark .comment-item{border-color:#444;}
+.del-cmt{color:red;font-size:12px;cursor:pointer;}
+</style>
+</head>
+<body>
+
+<div class="logo">智库</div>
+<button class="btn" id="loginBtn">管理员登录</button>
+<button class="btn" id="darkBtn">暗黑模式</button>
+<button class="btn" id="carouselBtn" style="display:none">轮播管理</button>
+<button class="btn" id="pubOpenBtn" style="display:none">发布作品</button>
+
+<div class="box" id="loginBox">
+<input type="text" id="user" placeholder="账号">
+<input type="password" id="pass" placeholder="密码">
+<button class="btn" onclick="login()">登录</button>
+</div>
+
+<div class="box" id="caroBox">
+<textarea id="caroText" rows="5" placeholder="每行一张图片链接"></textarea>
+<button class="btn" onclick="saveCaro()">保存轮播</button>
+</div>
+
+<div class="box" id="pubBox">
+<input type="text" id="title" placeholder="作品标题">
+<select id="workCat">
+<option value="image">图片作品</option>
+<option value="text">文字作品</option>
+<option value="video">视频作品</option>
+</select>
+<input type="text" id="img" placeholder="Git / 网络图片链接">
+<textarea id="desc" placeholder="作品简介"></textarea>
+<button class="btn" onclick="publishWork()">立即发布</button>
+</div>
+
+<div class="carousel" id="carousel">
+<button class="c-btn c-l" onclick="prev()">‹</button>
+<button class="c-btn c-r" onclick="next()">›</button>
+</div>
+
+<div class="cat-nav">
+<button class="btn cat active" onclick="filterWork('all',this)">全部</button>
+<button class="btn cat" onclick="filterWork('image',this)">图片</button>
+<button class="btn cat" onclick="filterWork('text',this)">文字</button>
+<button class="btn cat" onclick="filterWork('video',this)">视频</button>
+</div>
+
+<div class="work-grid" id="workList"></div>
+
+<div class="modal" id="modal">
+<div class="modal-box">
+<span class="close" onclick="closeModal()">×</span>
+<h3 id="mTitle"></h3>
+<div id="mType" style="color:#888;font-size:13px;margin:5px 0;"></div>
+<img id="mImg" style="width:100%;border-radius:8px;margin:10px 0;background:#eee;">
+<p id="mDesc"></p>
+<div class="interact">
+<div class="like" id="likeBtn">❤️ <span id="likeNum">0</span></div>
+<button class="btn" onclick="shareWork()">分享作品</button>
+</div>
+<div class="comment-list" id="cmtList"></div>
+<input type="text" id="cmtIn" placeholder="发表评论">
+<button class="btn" onclick="sendCmt()">发送评论</button>
+</div>
+</div>
+
+<script>
+const API_KEY = "f00400e7638bc39f";
+const BIN_ID = "6842c7d2e47a7978749c1234";
+const DB_URL = "https://api.jsonbin.io/v3/b/" + BIN_ID;
+
+let admin = false;
+let nowCat = "all";
+let caro = [];
+let works = [];
+let cmts = {};
+let likes = {};
+let nowIdx = 0;
+let nowWork = null;
+
+darkBtn.onclick = ()=> document.body.classList.toggle("dark");
+
+if(!localStorage.getItem('k')){
+    localStorage.setItem('k', API_KEY);
+}
+
+// 图片容错：Git 图加载失败自动兼容
+function imgError(el){
+    el.src="https://picsum.photos/400/220";
+}
+
+async function loadData(){
+  try{
+    let res = await fetch(DB_URL + "/latest");
+    let json = await res.json();
+    let d = json.record;
+    caro = d.carousel || [];
+    works = d.works || [];
+    cmts = d.comments || {};
+    likes = d.likes || {};
+    renderAll();
+  }catch(e){
+    console.log("初始化空数据");
+  }
+}
+
+async function saveData(){
+  await fetch(DB_URL,{
+    method:"PUT",
+    headers:{
+      "Content-Type":"application/json",
+      "X-Access-Key": localStorage.getItem('k')
+    },
+    body:JSON.stringify({carousel,works,comments:cmts,likes})
+  });
+}
+
+function login(){
+  let u = user.value.trim();
+  let p = pass.value.trim();
+  if(u==="MINETOWN"&&p==="Uis12123password"){
+    admin = true;
+    loginBox.classList.remove("on");
+    carouselBtn.style.display="inline-block";
+    pubOpenBtn.style.display="inline-block";
+    alert("登录成功");
+    renderWorks();
+  }else alert("账号密码错误");
+}
+
+loginBtn.onclick = ()=>loginBox.classList.toggle("on");
+carouselBtn.onclick = ()=>caroBox.classList.toggle("on");
+pubOpenBtn.onclick = ()=>pubBox.classList.toggle("on");
+
+async function saveCaro(){
+  if(!admin)return alert("请先登录");
+  let arr = caroText.value.split("\n").filter(x=>x.startsWith("http"));
+  caro = arr;
+  await saveData();
+  renderCaro();
+  alert("轮播已保存");
+}
+function renderCaro(){
+  let html="";
+  caro.forEach((s,i)=>{
+    html+=`<div class="c-item ${i==nowIdx?'active':''}"><img src="${s}" onerror="imgError(this)"></div>`;
+  });
+  document.querySelector(".carousel").innerHTML=html+
+  `<button class="c-btn c-l" onclick="prev()">‹</button>
+   <button class="c-btn c-r" onclick="next()">›</button>`;
+}
+function prev(){nowIdx=(nowIdx-1+caro.length)%caro.length;renderCaro();}
+function next(){nowIdx=(nowIdx+1)%caro.length;renderCaro();}
+
+async function publishWork(){
+  if(!admin)return alert("请先登录");
+  let title = title.value.trim();
+  let cat = workCat.value;
+  let img = img.value.trim();
+  let desc = desc.value.trim();
+  if(!title)return alert("请填标题");
+  let id = Date.now();
+  works.unshift({id,title,cat,img,desc});
+  await saveData();
+  renderWorks();
+  alert("发布成功");
+}
+
+function filterWork(type,dom){
+  nowCat=type;
+  document.querySelectorAll(".btn.cat").forEach(b=>b.classList.remove("active"));
+  dom.classList.add("active");
+}
+
+function renderWorks(){
+  let list = nowCat=="all"?works:works.filter(x=>x.cat==nowCat);
+  let map={image:"图片",text:"文字",video:"视频"};
+  let html="";
+  list.forEach(w=>{
+    html+=`
+    <div class="work-card">
+      <img src="${w.img}" onerror="imgError(this)" onclick="openDetail(${w.id})">
+      <div class="work-info">
+        <div class="work-title">${w.title}</div>
+        <div class="work-type">${map[w.cat]}作品</div>
+        ${admin?`<button class="btn del" style="margin-top:8px;font-size:12px" onclick="delWork(${w.id})">删除</button>`:""}
+      </div>
+    </div>`;
+  });
+  workList.innerHTML=html;
+}
+
+function openDetail(id){
+  nowWork=works.find(x=>x.id==id);
+  if(!nowWork)return;
+  modal.style.display="block";
+  mTitle.innerText=nowWork.title;
+  mType.innerText="分类："+{image:"图片",text:"文字",video:"视频"}[nowWork.cat];
+  mImg.src=nowWork.img;
+  mImg.onerror=function(){imgError(this);};
+  mDesc.innerText=nowWork.desc||"暂无简介";
+  likeNum.innerText=likes[nowWork.id]||0;
+  likeBtn.classList.toggle("active",!!likes[nowWork.id]);
+  renderCmt();
+}
+function closeModal(){modal.style.display="none";nowWork=null;}
+
+likeBtn.onclick=async function(){
+  if(!nowWork)return;
+  let wid=nowWork.id;
+  likes[wid]=likes[wid]?0:1;
+  await saveData();
+  likeNum.innerText=likes[wid];
+  this.classList.toggle("active");
+};
+
+function shareWork(){
+  navigator.clipboard.writeText(location.href);
+  alert("链接已复制");
+}
+
+async function sendCmt(){
+  if(!nowWork)return;
+  let txt=cmtIn.value.trim();
+  if(!txt)return;
+  let wid=nowWork.id;
+  if(!cmts[wid])cmts[wid]=[];
+  cmts[wid].push({txt,time:new Date().toLocaleString()});
+  await saveData();
+  cmtIn.value="";
+  renderCmt();
+}
+function renderCmt(){
+  if(!nowWork)return;
+  let list=cmts[nowWork.id]||[];
+  let html="";
+  list.forEach((item,i)=>{
+    html+=`
+    <div class="comment-item">
+      <div>${item.txt} <span style="font-size:12px;color:#999">${item.time}</span></div>
+      ${admin?`<span class="del-cmt" onclick="delCmt(${i})">删除</span>`:""}
+    </div>`;
+  });
+  cmtList.innerHTML=html;
+}
+async function delCmt(i){
+  if(!nowWork)return;
+  cmts[nowWork.id].splice(i,1);
+  await saveData();
+  renderCmt();
+}
+async function delWork(id){
+  if(!confirm("确定删除？"))return;
+  works=works.filter(x=>x.id!=id);
+  await saveData();
+  renderWorks();
+}
+
+function renderAll(){
+  renderCaro();
+  renderWorks();
+}
+
+loadData();
+</script>
+
+</body>
+</html>
+
